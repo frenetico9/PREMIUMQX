@@ -1,4 +1,4 @@
-# IMPORTS
+import os
 import yfinance as yf
 import streamlit as st
 import pandas as pd
@@ -95,6 +95,10 @@ def registrar_trade(data):
 
 # GRÁFICO DE RESULTADOS
 def plot_historico_trades(csv_file="historico_trades.csv"):
+    if not os.path.exists(csv_file):
+        print(f"⚠️ Arquivo '{csv_file}' não encontrado. Nenhum gráfico será gerado.")
+        return
+
     df = pd.read_csv(csv_file)
     df["acumulado"] = df["resultado"].cumsum()
 
@@ -174,52 +178,50 @@ def start_bot(email, password, stop_win, stop_loss, amount, decision, confidence
     except Exception as e:
         print(f"❌ Erro no bot: {e}")
 
-# ENTRADAS
-with open("input.txt", "r") as f:
-    lines = f.read().splitlines()
+# ENTRADAS (parsing seguro)
+try:
+    with open("input.txt", "r") as f:
+        lines = [line.split("←")[0].strip() for line in f.readlines() if line.strip()]
+
     email = lines[0]
     password = lines[1]
     stop_win = float(lines[2])
     stop_loss = float(lines[3])
     fixed_amount = float(lines[4])
+except Exception as e:
+    st.error(f"Erro ao ler o arquivo input.txt: {e}")
+    st.stop()
 
-# EXECUÇÃO
+# EXECUÇÃO PRINCIPAL
 print("🚀 Iniciando pipeline completo com IA + ajustes + gráfico")
 
 df = fetch_asset_data()
 train_model(df)
 
-# ajuste da confiança mínima
 min_conf = confianca_dinamica()
-
 decision, confidence = predict_next(df, min_confidence=min_conf)
 
 if decision:
     start_bot(email, password, stop_win, stop_loss, fixed_amount, decision, confidence)
     plot_historico_trades()
+else:
+    print("⏹️ Nenhuma operação realizada. Gráfico não gerado.")
 
-# === DASHBOARD STREAMLIT INTEGRADO ===
+# STREAMLIT DASHBOARD
 try:
     if st._is_running_with_streamlit:
-        st.set_page_config(page_title="IA Binárias", layout="wide")
-        st.title("📊 Painel do Bot de Opções Binárias com IA")
+        st.title("📊 Painel - Bot de Opções Binárias com IA")
+        if os.path.exists("historico_trades.csv"):
+            df = pd.read_csv("historico_trades.csv")
+            df["data_hora"] = pd.to_datetime(df["data_hora"])
+            df["acumulado"] = df["resultado"].cumsum()
 
-        try:
-            df_dash = pd.read_csv("historico_trades.csv")
-            df_dash["data_hora"] = pd.to_datetime(df_dash["data_hora"])
-            df_dash["acumulado"] = df_dash["resultado"].cumsum()
+            st.subheader("📈 Lucro Acumulado")
+            st.line_chart(df.set_index("data_hora")["acumulado"])
 
-            st.subheader("📈 Lucro/Prejuízo Acumulado")
-            fig, ax = plt.subplots(figsize=(12, 5))
-            ax.plot(df_dash["data_hora"], df_dash["acumulado"], marker="o", color="green")
-            ax.set_title("Evolução do saldo")
-            ax.grid(True)
-            st.pyplot(fig)
-
-            st.subheader("📋 Últimos trades")
-            st.dataframe(df_dash.sort_values(by="data_hora", ascending=False).head(10))
-
-        except FileNotFoundError:
-            st.warning("📂 Execute o bot primeiro para gerar 'historico_trades.csv'")
+            st.subheader("📋 Últimos Trades")
+            st.dataframe(df.tail(10))
+        else:
+            st.info("Histórico ainda não gerado.")
 except:
     pass
