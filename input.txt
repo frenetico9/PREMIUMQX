@@ -1,5 +1,5 @@
 hhenriquesantana4@gmail.com	
 Hi159357@
-25 ← Stop Win (meta de lucro)
-10 ← Stop Loss (limite de perda)
-5  ← Valor fixo por operação
+25
+10
+5
