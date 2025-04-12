@@ -1,3 +1,4 @@
 data,hora,par,entrada,direcao,resultado
-2025-04-12,15:30,EURUSD,1.50,call,win
-2025-04-12,15:45,EURUSD,1.00,put,loss
+2025-04-10,09:00,EURUSD,1.56,call,win
+2025-04-10,09:15,EURUSD,1.87,put,loss
+2025-04-10,09:30,EURUSD,1.32,call,win
