@@ -18,7 +18,7 @@ def fetch_asset_data(symbol="EURUSD=X", interval="1m", period="7d"):
     return df
 
 # TREINAMENTO
-def train_model(df, model_path="modelo_rf.joblib"):
+def train_model(df):
     df['target'] = (df['Close'].shift(-1) > df['Close']).astype(int)
     df.dropna(inplace=True)
     X = df[['Open', 'High', 'Low', 'Close']]
@@ -28,7 +28,6 @@ def train_model(df, model_path="modelo_rf.joblib"):
     model.fit(X_train, y_train)
     acc = accuracy_score(y_test, model.predict(X_test))
     print(f"✅ Modelo treinado. Acurácia: {acc:.2%}")
-    joblib.dump(model, model_path)
     return model
 
 # AJUSTE DINÂMICO DE CONFIANÇA
@@ -50,9 +49,9 @@ def confianca_dinamica(csv_file="historico_trades.csv", janela=5, base=0.6):
     except:
         return base
 
-# PREVISÃO COM FILTRO
-def predict_next(df, model_path="modelo_rf.joblib", min_confidence=0.6):
-    model = joblib.load(model_path)
+# PREVISÃO COM FILTRO - usa modelo treinado direto
+def predict_next(df, min_confidence=0.6):
+    model = train_model(df)
     latest = df.iloc[-1:][['Open', 'High', 'Low', 'Close']].values
     prob = model.predict_proba(latest)[0]
     decision = "UP" if prob[1] > 0.5 else "DOWN"
@@ -65,7 +64,7 @@ def predict_next(df, model_path="modelo_rf.joblib", min_confidence=0.6):
         return None, confidence
     return decision, confidence
 
-# GRÁFICO DE RESULTADOS (corrigido com data + hora)
+# GRÁFICO DE RESULTADOS
 def plot_historico_trades(csv_file="historico_trades.csv"):
     if not os.path.exists(csv_file) or os.stat(csv_file).st_size == 0:
         print(f"⚠️ Arquivo '{csv_file}' não encontrado ou está vazio.")
@@ -107,7 +106,6 @@ except Exception as e:
 print("🚀 Iniciando pipeline completo com IA + ajustes + gráfico")
 
 df = fetch_asset_data()
-train_model(df)
 min_conf = confianca_dinamica()
 decision, confidence = predict_next(df, min_confidence=min_conf)
 
